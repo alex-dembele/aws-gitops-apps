@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/alex-dembele/aws-gitops-infrastructure.git'
+    repoURL: 'https://github.com/alex-dembele/aws-gitops-apps.git'
     targetRevision: HEAD
     path: gitops/apps/mon-app/overlays/staging
   destination:

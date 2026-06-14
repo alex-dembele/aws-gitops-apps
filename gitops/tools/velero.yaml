@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://vmware-tanzu.github.io/helm-charts'
+    chart: velero
+    targetRevision: 5.1.3
+    helm:
+      values: |
+        configuration:
+          provider: aws
+          backupStorageLocation:
+            - name: default
+              provider: aws
+              bucket: my-velero-bucket # Sera à remplacer par le nom généré par TF
+              config:
+                region: us-east-1
+        serviceAccount:
+          server:
+            create: true
+            name: velero-server
+            annotations:
+              eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/gitops-eks-cluster-velero"
+        credentials:
+          useSecret: false # car on utilise IRSA
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: velero/velero-plugin-for-aws:v1.7.1
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: velero
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

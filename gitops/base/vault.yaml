@@ -12,14 +12,33 @@ spec:
     helm:
       values: |
         server:
-          # Mode standalone pour minimiser les coûts initialement
-          # En production, on passerait à un backend Raft avec HA (High Availability)
-          standalone:
+          # Mode Haute Disponibilité avec Raft
+          ha:
             enabled: true
-          resources:
-            requests:
-              memory: 256Mi
-              cpu: 100m
+            replicas: 3
+            raft:
+              enabled: true
+              setNodeId: true
+              config: |
+                ui = true
+                listener "tcp" {
+                  tls_disable = 1
+                  address = "[::]:8200"
+                  cluster_address = "[::]:8201"
+                }
+                storage "raft" {
+                  path = "/vault/data"
+                }
+                seal "awskms" {
+                  region     = "us-east-1"
+                  # kms_key_id sera fourni par Terraform ou à injecter manuellement
+                  kms_key_id = "alias/gitops-eks-cluster-vault-auto-unseal"
+                }
+          serviceAccount:
+            create: true
+            annotations:
+              # Assurez-vous de mettre votre Account ID ici
+              eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/gitops-eks-cluster-vault-kms"
         ui:
           enabled: true
           serviceType: "ClusterIP"
