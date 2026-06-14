@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://kubernetes-sigs.github.io/external-dns/'
+    chart: external-dns
+    targetRevision: 1.14.4
+    helm:
+      values: |
+        provider: aws
+        env:
+          - name: AWS_REGION
+            value: "us-east-1"
+        serviceAccount:
+          create: true
+          name: external-dns
+          annotations:
+            eks.amazonaws.com/role-arn: "arn:aws:iam::123456789012:role/gitops-eks-cluster-external-dns"
+        # domainFilters:
+        #  - example.com # Commenté pour permettre le multi-domaines (tous les domaines de la zone Route53)
+        policy: sync # permet de créer, mettre à jour et supprimer les records
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,118 @@
+# -----------------------------------------------------------------------------
+# ISTIO GATEWAY PRINCIPALE
+# -----------------------------------------------------------------------------
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: main-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway # Utilise le pod istio-ingress
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*" # Accepte n'importe quel host (le routage spécifique se fait dans les VirtualServices)
+    tls:
+      httpsRedirect: true # Redirection HTTP -> HTTPS
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "*"
+    tls:
+      mode: SIMPLE
+      credentialName: wildcard-tls-cert # Par défaut, mais on peut avoir plusieurs Gateway/Certs
+
+
+---
+# -----------------------------------------------------------------------------
+# CERTIFICAT TLS WILDCARD (Généré via Route53 DNS-01)
+# -----------------------------------------------------------------------------
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-cert
+  namespace: istio-system
+spec:
+  secretName: wildcard-tls-cert
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - "*.example.com"
+  - "*.stag.example.com"
+
+---
+# -----------------------------------------------------------------------------
+# VIRTUAL SERVICES (ROUTAGE)
+# -----------------------------------------------------------------------------
+
+# --- ARGOCD ---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: argocd-vs
+  namespace: argocd
+spec:
+  hosts:
+  - "argocd.stag.example.com"
+  gateways:
+  - istio-system/main-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: argocd-server.argocd.svc.cluster.local
+        port:
+          number: 80
+
+---
+# --- GRAFANA ---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: grafana-vs
+  namespace: monitoring
+spec:
+  hosts:
+  - "grafana.stag.example.com"
+  gateways:
+  - istio-system/main-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: kube-prometheus-stack-grafana.monitoring.svc.cluster.local
+        port:
+          number: 80
+
+---
+# --- SONARQUBE ---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: sonarqube-vs
+  namespace: sonarqube
+spec:
+  hosts:
+  - "sonar.stag.example.com"
+  gateways:
+  - istio-system/main-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: sonarqube-sonarqube.sonarqube.svc.cluster.local
+        port:
+          number: 9000

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mon-app
+  labels:
+    app: mon-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mon-app
+  template:
+    metadata:
+      labels:
+        app: mon-app
+    spec:
+      containers:
+        - name: mon-app
+          image: nginx:latest # Placeholder qui sera mis à jour par kustomize
+          ports:
+            - containerPort: 80
+          envFrom:
+            - secretRef:
+                name: mon-app-secret # Ce secret sera créé par l'ExternalSecret

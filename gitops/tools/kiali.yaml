@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kiali
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://kiali.org/helm-charts'
+    chart: kiali-server
+    targetRevision: 1.86.0
+    helm:
+      values: |
+        auth:
+          strategy: anonymous # Pour la simplicité, mais à sécuriser en production (ex: OIDC)
+        external_services:
+          istio:
+            root_namespace: istio-system
+          prometheus:
+            url: "http://kube-prometheus-stack-prometheus.monitoring:9090/"
+          grafana:
+            url: "http://kube-prometheus-stack-grafana.monitoring:80/"
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: istio-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

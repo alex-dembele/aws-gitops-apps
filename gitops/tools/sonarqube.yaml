@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sonarqube
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://SonarSource.github.io/helm-chart-sonarqube'
+    chart: sonarqube
+    targetRevision: 10.5.1
+    helm:
+      values: |
+        ingress:
+          enabled: false # On utilise Istio VirtualService
+        # Optimisation des ressources pour un petit environnement
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 400m
+        postgresql:
+          postgresqlPassword: "sonar" # À sécuriser via Vault en prod
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: sonarqube
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

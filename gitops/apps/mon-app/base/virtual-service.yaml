@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: mon-app-vs
+spec:
+  # L'hôte sera redéfini dans les overlays
+  hosts:
+  - "mon-app.example.com"
+  gateways:
+  - istio-system/main-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: mon-app
+        port:
+          number: 80

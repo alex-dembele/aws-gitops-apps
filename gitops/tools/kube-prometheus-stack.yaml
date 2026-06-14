@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://prometheus-community.github.io/helm-charts'
+    chart: kube-prometheus-stack
+    targetRevision: 58.7.2
+    helm:
+      values: |
+        grafana:
+          adminPassword: "prom-operator" # À changer en production ou utiliser Vault
+          ingress:
+            enabled: false # Géré par Istio VirtualService
+        prometheus:
+          prometheusSpec:
+            resources:
+              requests:
+                memory: 512Mi
+                cpu: 500m
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # Nécessaire pour les CRDs de Prometheus qui sont très longs

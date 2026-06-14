@@ -1,0 +1,31 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_tag:
+        description: 'Tag de l\'image (SHA ou version) à promouvoir en Production'
+        required: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du dépôt GitOps
+        uses: actions/checkout@v4
+        with:
+          repository: "alex-dembele/aws-gitops-infrastructure"
+          token: ${{ secrets.GITOPS_PAT }}
+          path: gitops-repo
+
+      - name: Mise à jour du tag de l'image en Prod (ArgoCD)
+        run: |
+          cd gitops-repo/gitops/apps/mon-app/overlays/prod
+          # Utilisation de sed pour remplacer le tag dans kustomization.yaml
+          sed -i "s|newTag: .*|newTag: \"${{ github.event.inputs.target_tag }}\"|g" kustomization.yaml
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add kustomization.yaml
+          git commit -m "ci(prod): promote image tag to ${{ github.event.inputs.target_tag }}"
+          git push origin main

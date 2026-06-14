@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: staging
+
+# Prefix pour le nom de toutes les ressources
+namePrefix: staging-
+
+# Redéfinition du tag de l'image. 
+# CE FICHIER EST CELUI QUI SERA MODIFIÉ PAR LE CI/CD
+images:
+  - name: nginx:latest
+    newName: mon-app-image
+    newTag: "v1.0.0" # Sera remplacé par le SHA du commit lors du CI
+
+# Remplacement de l'hôte dans le VirtualService
+patches:
+  - target:
+      kind: VirtualService
+      name: mon-app-vs
+    patch: |-
+      - op: replace
+        path: /spec/hosts/0
+        value: "mon-app.stag.example.com" # À adapter
+  - target:
+      kind: ExternalSecret
+      name: mon-app-external-secret
+    patch: |-
+      - op: replace
+        path: /spec/dataFrom/0/extract/key
+        value: "secret/data/staging/mon-app"

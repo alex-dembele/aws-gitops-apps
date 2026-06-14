@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: prod
+
+# Prefix pour le nom de toutes les ressources
+namePrefix: prod-
+
+# Redéfinition du tag de l'image.
+# CE FICHIER SERA MIS À JOUR LORS DE LA PROMOTION EN PROD
+images:
+  - name: nginx:latest
+    newName: mon-app-image
+    newTag: "v1.0.0" # Le tag promu
+
+# Remplacement de l'hôte et du secret dans l'environnement de prod
+patches:
+  - target:
+      kind: VirtualService
+      name: mon-app-vs
+    patch: |-
+      - op: replace
+        path: /spec/hosts/0
+        value: "mon-app.example.com" # À adapter
+  - target:
+      kind: ExternalSecret
+      name: mon-app-external-secret
+    patch: |-
+      - op: replace
+        path: /spec/dataFrom/0/extract/key
+        value: "secret/data/prod/mon-app"
+  
+  # Augmentation des réplicas pour la production
+  - target:
+      kind: Deployment
+      name: mon-app
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3

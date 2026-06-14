@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: custom-manifests
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/alex-dembele/aws-gitops-infrastructure.git'
+    targetRevision: HEAD
+    path: gitops/tools/manifests
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: istio-system # L'ingress gateway et beaucoup de règles seront là
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
