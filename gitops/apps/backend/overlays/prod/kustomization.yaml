@@ -6,5 +6,5 @@ resources:
 nameSuffix: -prod
 
 images:
-  - name: hashicorp/http-echo
-    newTag: "0.2.3"
+  - name: ghcr.io/stefanprodan/podinfo
+    newTag: "6.6.0"

@@ -20,6 +20,9 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: nginxdemos/hello:latest
+        image: gcr.io/google-samples/gb-frontend:v5
+        env:
+        - name: GET_HOSTS_FROM
+          value: dns
         ports:
         - containerPort: 80

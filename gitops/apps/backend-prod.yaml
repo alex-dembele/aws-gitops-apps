@@ -4,7 +4,7 @@ metadata:
   name: backend-prod
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: backend=hashicorp/http-echo
+    argocd-image-updater.argoproj.io/image-list: backend=ghcr.io/stefanprodan/podinfo
     argocd-image-updater.argoproj.io/backend.update-strategy: semver
     argocd-image-updater.argoproj.io/write-back-method: git
 spec:

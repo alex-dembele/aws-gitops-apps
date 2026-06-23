@@ -14,8 +14,6 @@ spec:
     spec:
       containers:
       - name: worker
-        image: busybox:latest
-        command:
-          - /bin/sh
-          - -c
-          - "while true; do echo 'Working...'; sleep 10; done"
+        image: redis:alpine
+        ports:
+        - containerPort: 6379

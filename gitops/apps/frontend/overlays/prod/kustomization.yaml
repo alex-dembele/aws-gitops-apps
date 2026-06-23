@@ -6,5 +6,5 @@ resources:
 nameSuffix: -prod
 
 images:
-  - name: nginxdemos/hello
-    newTag: "latest"
+  - name: gcr.io/google-samples/gb-frontend
+    newTag: "v5"

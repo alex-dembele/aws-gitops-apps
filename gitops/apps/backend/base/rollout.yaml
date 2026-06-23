@@ -24,8 +24,21 @@ spec:
     spec:
       containers:
       - name: backend
-        image: hashicorp/http-echo:latest
-        args:
-          - "-text=hello from backend"
+        image: ghcr.io/stefanprodan/podinfo:6.6.0
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 5678
+        - name: http
+          containerPort: 9898
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9898
+          initialDelaySeconds: 1
+          periodSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9898
+          initialDelaySeconds: 1
+          periodSeconds: 3

@@ -6,5 +6,5 @@ resources:
 nameSuffix: -staging
 
 images:
-  - name: busybox
-    newTag: "latest"
+  - name: redis
+    newTag: "alpine"
