@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-image-updater
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: 'https://argoproj.github.io/argo-helm'
+    chart: argocd-image-updater
+    targetRevision: 0.11.0
+    helm:
+      values: |
+        config:
+          registries:
+            - name: Docker Hub
+              api_url: https://registry-1.docker.io
+              prefix: docker.io
+              credentials: ext:/scripts/dockerhub-login.sh
+        authScripts:
+          enabled: true
+          scripts:
+            dockerhub-login.sh: |
+              #!/bin/sh
+              echo "username:password" # A configurer avec ESO en prod !
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
