@@ -1,50 +1,67 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: ApplicationSet
 metadata:
   name: opencost
   namespace: argocd
 spec:
-  project: default
-  source:
-    repoURL: 'https://opencost.github.io/opencost-helm-chart'
-    chart: opencost
-    targetRevision: 1.34.0
-    helm:
-      values: |
-        opencost:
-          exporter:
-            defaultClusterId: "gitops-eks-cluster"
-          ui:
-            enabled: true
-          prometheus:
-            external:
-              url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
-  destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: observability
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
----
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: opencost-ui
-  namespace: observability
-spec:
-  hosts:
-  - "opencost.<VOTRE_DOMAINE_PLACEHOLDER.com>"
-  gateways:
-  - istio-system/public-gateway
-  http:
-  - match:
-    - uri:
-        prefix: /
-    route:
-    - destination:
-        host: opencost-ui
-        port:
-          number: 9090
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - clusters:
+      selector:
+        matchExpressions:
+          - key: name
+            operator: Exists
+  template:
+    metadata:
+      name: 'opencost-{{.name}}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: 'https://opencost.github.io/opencost-helm-chart'
+        chart: opencost
+        targetRevision: 1.34.0
+        helm:
+          values: |
+            opencost:
+              exporter:
+                # Identification précise du cluster envoyant la facture
+                defaultClusterId: "{{.name}}"
+              ui:
+                enabled: true
+              prometheus:
+                external:
+                  url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
+            
+            # Injection dynamique de la route Istio dans les objets additionnels Helm
+            # Résultat : opencost.gitops-eks-cluster-stag.example.com
+            extraObjects:
+              - apiVersion: networking.istio.io/v1alpha3
+                kind: VirtualService
+                metadata:
+                  name: opencost-ui
+                  namespace: observability
+                spec:
+                  hosts:
+                  - "opencost.{{.name}}.<VOTRE_DOMAINE_PLACEHOLDER.com>"
+                  gateways:
+                  - istio-system/public-gateway
+                  http:
+                  - match:
+                    - uri:
+                        prefix: /
+                    route:
+                    - destination:
+                        host: opencost-ui
+                        port:
+                          number: 9090
+      destination:
+        server: '{{.server}}'
+        namespace: observability
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
