@@ -1,0 +1,31 @@
+name: Kyverno Policy Validation
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'gitops/tools/manifests/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'gitops/tools/manifests/**'
+
+jobs:
+  kyverno-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Kyverno CLI
+        uses: kyverno/action-install-cli@v0.2.0
+
+      - name: Validate Kyverno Policies
+        run: |
+          echo "Validating Kyverno policies syntax..."
+          kyverno validate gitops/tools/manifests/
+
+      # Lorsque des cas de tests formels (kyverno-test.yaml) seront ajoutés dans le repo, 
+      # cette ligne vérifiera que les policies bloquent/autorisent correctement.
+      # - name: Test Kyverno Policies
+      #   run: kyverno test gitops/tools/manifests/

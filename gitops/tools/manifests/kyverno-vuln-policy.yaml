@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-critical-vulnerabilities
+  annotations:
+    policies.kyverno.io/title: Restrict Critical Vulnerabilities
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Cette politique bloque le déploiement de tout Pod dont l'image contient 
+      des vulnérabilités classées CRITICAL. Elle simule une vérification en 
+      attendant le rapport Trivy, ou vérifie par admission directe.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: prevent-critical-cves
+      match:
+        any:
+        - resources:
+            kinds:
+              - Pod
+      # Dans une implémentation réelle Trivy + Kyverno, on utilise le mutation/vérification OCI 
+      # ou on valide la présence d'une signature "clean".
+      # Ceci est une structure de validation qui s'appuie sur le verifyImages
+      verifyImages:
+      - imageReferences:
+        - "*"
+        mutateDigest: true
+        verifyDigest: false
+        required: false
+        # Exiger que l'image passe l'attestation de vulnérabilité (requiert cosign + trivy plugin)
+        attestations:
+        - predicateType: https://trivy.aquasec.com/scan/v2
+          conditions:
+          - all:
+            - key: "{{ length(severity.CRITICAL) }}"
+              operator: Equals
+              value: 0

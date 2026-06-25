@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jaeger
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://jaegertracing.github.io/helm-charts'
+    chart: jaeger
+    targetRevision: 3.0.1
+    helm:
+      values: |
+        provisionDataStore:
+          cassandra: false
+        storage:
+          type: memory  # À changer vers Elasticsearch/OpenSearch en production pour la rétention
+        agent:
+          enabled: true
+        collector:
+          enabled: true
+        query:
+          enabled: true
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

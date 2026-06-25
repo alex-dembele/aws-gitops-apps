@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # 1. Triggers : Quand est-ce qu'on notifie ?
+  trigger.on-deployed: |
+    - description: Application is synced and healthy.
+      send: [app-deployed]
+      when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+  trigger.on-health-degraded: |
+    - description: Application has degraded.
+      send: [app-degraded]
+      when: app.status.health.status == 'Degraded'
+  
+  # 2. Templates : Comment le message est formaté ?
+  template.app-deployed: |
+    email:
+      subject: Application {{.app.metadata.name}} has been successfully deployed.
+    slack:
+      attachments: |
+        [{
+          "title": "{{.app.metadata.name}}",
+          "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+          "color": "#18be52",
+          "fields": [
+            {"title": "Sync Status", "value": "{{.app.status.sync.status}}", "short": true},
+            {"title": "Repository", "value": "{{.app.spec.source.repoURL}}", "short": true}
+          ]
+        }]
+    teams:
+      title: Application {{.app.metadata.name}} has been deployed
+      text: The application is now running.
+  
+  template.app-degraded: |
+    email:
+      subject: Application {{.app.metadata.name}} is Degraded!
+    slack:
+      attachments: |
+        [{
+          "title": "{{.app.metadata.name}}",
+          "color": "#f4c030",
+          "text": "Application has degraded"
+        }]
+
+  # 3. Services : Configuration des intégrations (les tokens sont dans le Secret)
+  service.slack: |
+    token: $slack-token
+  service.teams: |
+    webhookUrl: $teams-webhook
+  service.email: |
+    host: smtp.example.com
+    port: 587
+    from: argocd@example.com
+    username: $email-username
+    password: $email-password
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-notifications-secret
+  namespace: argocd
+type: Opaque
+stringData:
+  # Ces valeurs DOIVENT être surchargées par Vault / ExternalSecrets en production
+  slack-token: "<SLACK_TOKEN_PLACEHOLDER>"
+  teams-webhook: "<TEAMS_WEBHOOK_URL_PLACEHOLDER>"
+  email-username: "<EMAIL_USER_PLACEHOLDER>"
+  email-password: "<EMAIL_PASSWORD_PLACEHOLDER>"

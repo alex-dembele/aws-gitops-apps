@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps-generator
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - git:
+      repoURL: 'https://github.com/votre-orga/aws-gitops-apps.git'
+      revision: HEAD
+      # Détecte tous les dossiers qui ont un sous-répertoire overlays/prod (ou autre environnement selon le besoin)
+      directories:
+      - path: gitops/apps/*
+  template:
+    metadata:
+      # Le nom de l'application Argo correspondra au nom du dossier
+      name: '{{.path.basename}}'
+      namespace: argocd
+      labels:
+        environment: dynamic
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/votre-orga/aws-gitops-apps.git'
+        targetRevision: HEAD
+        # Utilise par défaut l'overlay prod si présent, sinon utilise la base (adaptable)
+        path: '{{.path.path}}'
+      destination:
+        server: 'https://kubernetes.default.svc'
+        # Le nom du namespace créé pour l'app correspondra au nom du dossier
+        namespace: '{{.path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

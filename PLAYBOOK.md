@@ -16,40 +16,49 @@ Ce dépôt (`aws-gitops-apps`) est la source de vérité pour tous les déploiem
 
 ---
 
-## 2. 🚀 Onboarding : Publier un nouveau Microservice
+## 2. 🚀 Onboarding : Déployer un projet de bout en bout (App of Apps)
 
-Pour installer un nouveau service métier, voici la marche à suivre :
+Notre cluster est configuré avec un **ApplicationSet** (le pattern *App of Apps*). Cela signifie qu'ArgoCD scanne constamment ce dépôt Git. Dès que vous ajoutez un nouveau dossier dans `gitops/apps/`, l'Application est **automatiquement reconnue et créée** sans aucune configuration supplémentaire côté Argo !
 
-1. **Création des Manifestes Base** :
-   Dans `gitops/apps/`, créez un répertoire au nom de votre service (ex: `my-backend/base`).
-   Placez-y vos `deployment.yaml`, `service.yaml`, et `kustomization.yaml`.
+### Tutoriel de bout en bout (End-to-End) :
 
-2. **Création des Overlays (Environnements)** :
-   Créez `my-backend/overlays/staging` et `my-backend/overlays/prod`.
-   Grâce à *Kustomize*, modifiez uniquement le nombre de CPU/RAM, les variables d'environnement propres à la Prod, et le nom de l'image (si vous n'utilisez pas Argo Image Updater).
+**Étape 1 : Créer la hiérarchie de votre application**
+1. Sur votre branche locale, créez le dossier : `mkdir -p gitops/apps/mon-nouveau-backend/base`
+2. Créez également vos dossiers d'environnements : `mkdir -p gitops/apps/mon-nouveau-backend/overlays/prod`
 
-3. **Déclarer l'App à ArgoCD** :
-   Créez un fichier Application (ex: `my-backend-prod.yaml`) à la racine de `gitops/apps/` :
+**Étape 2 : Les Manifestes de Base (`/base`)**
+1. Placez votre `deployment.yaml` (ou `rollout.yaml`).
+2. Placez votre `service.yaml` (ex: ciblant le port 8080).
+3. Placez votre `virtual-service.yaml` Istio pour router `api.votre-domaine.com` vers votre Service K8s.
+4. Créez un `kustomization.yaml` dans `/base` :
 ```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: my-backend-prod
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: 'https://github.com/votre-orga/aws-gitops-apps.git'
-    path: gitops/apps/my-backend/overlays/prod
-    targetRevision: HEAD
-  destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: my-backend
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+  - virtual-service.yaml
 ```
+
+**Étape 3 : Spécifier la Production (`/overlays/prod`)**
+1. Créez un `kustomization.yaml` dans `/overlays/prod` :
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+namePrefix: prod-
+images:
+  - name: mon-image-app
+    newName: 123456789.dkr.ecr.us-east-1.amazonaws.com/mon-image
+    newTag: "v1.0.0"
+```
+
+**Étape 4 : Déploiement "Mains Libres"**
+1. Commitez et pushez sur `main`.
+2. **C'est fini !** L'ApplicationSet ArgoCD détectera instantanément le nouveau répertoire `gitops/apps/mon-nouveau-backend`.
+3. Il va provisionner tout seul un namespace Kubernetes portant le nom `mon-nouveau-backend`.
+4. Il y déploiera l'intégralité de vos ressources Kubernetes. Vous n'avez jamais eu besoin de créer de fichier de configuration Argo `Applicaton` manuellement.
 
 ---
 

@@ -41,6 +41,12 @@ spec:
                 cpu: 10m
                 memory: 64Mi
           hub: docker.io/istio
+        meshConfig:
+          enableTracing: true
+          defaultConfig:
+            tracing:
+              zipkin:
+                address: jaeger-collector.observability.svc.cluster.local:9411
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: istio-system
